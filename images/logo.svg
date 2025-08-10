@@ -1,0 +1,48 @@
+<svg width="460" height="120" viewBox="0 0 460 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Import a thick, rounded, 70s-style font from Google Fonts -->
+    <style>
+      <![CDATA[
+        @import url('https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap');
+      ]]>
+    </style>
+  </defs>
+
+  <!-- Group to hold the text and the star together -->
+  <g>
+    <!-- The main text "ZapStar" -->
+    <text 
+      x="10" 
+      y="95" 
+      font-family="'Luckiest Guy', cursive" 
+      font-size="90" 
+      fill="white" 
+      stroke="black" 
+      stroke-width="7" 
+      stroke-linejoin="round">
+      ZapSta
+    </text>
+    
+    <!-- The letter 'r' is separate to allow the star to attach cleanly -->
+    <text 
+      x="300" 
+      y="95" 
+      font-family="'Luckiest Guy', cursive" 
+      font-size="90" 
+      fill="white" 
+      stroke="black" 
+      stroke-width="7" 
+      stroke-linejoin="round">
+      r
+    </text>
+
+    <!-- The star, positioned to connect to the 'r' -->
+    <path 
+      transform="translate(355, 5) scale(0.9)"
+      d="M 50,0 L 61.8,38.2 L 100,38.2 L 69.1,61.8 L 80.9,100 L 50,76.4 L 19.1,100 L 30.9,61.8 L 0,38.2 L 38.2,38.2 Z"
+      fill="white" 
+      stroke="black" 
+      stroke-width="7.8" 
+      stroke-linejoin="round"/>
+  </g>
+</svg>
