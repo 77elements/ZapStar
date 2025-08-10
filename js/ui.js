@@ -164,33 +164,40 @@ export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats) 
     showShareButtons();
 }
 
-export function logToUI(message) {
-    const container = document.getElementById('live-log-container');
-    const log = document.getElementById('live-log');
-    if (!container || !log) return;
+export function displayRelayStatus(relayStatus) {
+    const container = document.getElementById('relay-status-container');
+    const list = document.getElementById('relay-status-list');
+    if (!container || !list) return;
+
+    list.innerHTML = ''; // Clear previous status
+
+    if (!relayStatus || relayStatus.length === 0) {
+        container.style.display = 'none';
+        return;
+    }
 
     container.style.display = 'block';
-    const timestamp = new Date().toLocaleTimeString();
-    const logEntry = document.createElement('p');
-    logEntry.innerHTML = `<code>[${timestamp}]</code> ${message}`;
-    log.appendChild(logEntry);
-    log.scrollTop = log.scrollHeight;
-}
+    
+    // Sort relays: connected first, then by name
+    relayStatus.sort((a, b) => {
+        if (a.status === 'connected' && b.status !== 'connected') return -1;
+        if (a.status !== 'connected' && b.status === 'connected') return 1;
+        return a.url.localeCompare(b.url);
+    });
 
-export function setupCopyLogButton() {
-    const copyButton = document.getElementById('copy-log-button');
-    const logContainer = document.getElementById('live-log');
-    if (!copyButton || !logContainer) return;
+    relayStatus.forEach(relay => {
+        const item = document.createElement('li');
+        item.className = 'relay-status-item';
 
-    copyButton.addEventListener('click', () => {
-        const logText = logContainer.innerText;
-        navigator.clipboard.writeText(logText).then(() => {
-            copyButton.textContent = 'Copied!';
-            setTimeout(() => {
-                copyButton.textContent = 'Copy';
-            }, 2000);
-        }).catch(err => {
-            console.error('Failed to copy log: ', err);
-        });
+        const indicator = document.createElement('span');
+        indicator.className = `relay-status-indicator ${relay.status}`;
+        
+        const url = document.createElement('span');
+        url.className = 'relay-url';
+        url.textContent = relay.url;
+
+        item.appendChild(indicator);
+        item.appendChild(url);
+        list.appendChild(item);
     });
 }

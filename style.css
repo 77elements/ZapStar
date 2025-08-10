@@ -339,36 +339,10 @@ footer a:hover {
     background-color: var(--primary-accent-hover);
 }
 
-/* --- Live Log --- */
-.log-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.5rem;
-}
-
-#live-log-container h4 {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--text-color);
-}
-
-#copy-log-button {
-    width: auto;
-    padding: 0.1rem 0.5rem;
-    font-size: 0.7rem;
-    background-color: var(--container-background);
-    color: var(--primary-accent-color);
-    border: 1px solid var(--border-color);
-    border-radius: 0.2rem;
-}
-
-#copy-log-button:hover {
-    background-color: #f8f9fa;
-    border-color: var(--primary-accent-color);
-}
-
-#live-log-container {
+/* --- Relay Status --- */
+#relay-status-container {
+    font-size: 0.8rem;
+    color: var(--subtle-text-color);
     margin: 1rem 0;
     padding: 0.75rem;
     border: 1px solid var(--border-color);
@@ -376,22 +350,44 @@ footer a:hover {
     background-color: #f8f9fa;
 }
 
-#live-log {
-    height: 10rem; /* 200px */
-    overflow-y: auto;
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-    font-size: 0.75rem;
-    background-color: var(--container-background);
-    padding: 0.5rem;
-    border-radius: 0.3rem;
+#relay-status-container h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.9rem;
+    color: var(--text-color);
 }
 
-#live-log p {
-    margin: 0 0 0.25rem 0;
+#relay-status-list {
+    list-style-type: none;
     padding: 0;
-    line-height: 1.4;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.5rem;
 }
 
-#live-log code {
-    color: var(--subtle-text-color);
+.relay-status-item {
+    display: flex;
+    align-items: center;
+}
+
+.relay-status-indicator {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.relay-status-indicator.connected {
+    background-color: #28a745; /* Green */
+}
+
+.relay-status-indicator.error {
+    background-color: #dc3545; /* Red */
+}
+
+.relay-url {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

@@ -2,7 +2,7 @@
 // Main application entry point.
 
 import { handleLogin } from './auth.js';
-import { fetchZaps, fetchProfiles, checkRelaysWithVanillaJS, publishNote } from './nostr.js';
+import { fetchZaps, fetchProfiles, checkRelayStatuses, publishNote } from './nostr.js';
 import { 
     showMainView, 
     updateWelcomeMessage, 
@@ -13,8 +13,7 @@ import {
     generatePostContent,
     showEditModal,
     hideEditModal,
-    logToUI,
-    setupCopyLogButton
+    displayRelayStatus
 } from './ui.js';
 
 let userPubkey = null;
@@ -27,7 +26,6 @@ let lastFetchData = {
 };
 
 function processZapEvents(events) {
-    logToUI(`Processing ${events.length} zap events...`);
     const zapperTotals = new Map();
     let oldestZapTimestamp = Infinity;
 
@@ -60,7 +58,6 @@ function processZapEvents(events) {
         }))
         .sort((a, b) => b.totalSats - a.totalSats);
         
-    logToUI(`Found ${sortedZappers.length} unique zappers.`);
     return {
         topZappers: sortedZappers.slice(0, 20),
         oldestZapTimestamp: oldestZapTimestamp === Infinity ? null : oldestZapTimestamp
@@ -75,19 +72,19 @@ async function handleFetchZappers() {
     
     document.getElementById('zapper-list').innerHTML = '';
     document.getElementById('list-footer').innerHTML = '';
-    document.getElementById('live-log').innerHTML = ''; // Clear the log
+    displayRelayStatus([]);
     
     showProgressBar();
     
     try {
         // PHASE 1: Independent status check
         updateProgressBar(10, 'Pinging relays...');
-        await checkRelaysWithVanillaJS(logToUI);
-        logToUI("--- Relay Check Complete ---");
+        const relayStatuses = await checkRelayStatuses();
+        displayRelayStatus(relayStatuses);
 
         // PHASE 2: Data fetch using the reliable SimplePool
         updateProgressBar(30, 'Fetching zaps...');
-        const zapEvents = await fetchZaps(userPubkey, logToUI);
+        const zapEvents = await fetchZaps(userPubkey);
         
         updateProgressBar(50, 'Processing results...');
         const { topZappers, oldestZapTimestamp } = processZapEvents(zapEvents);
@@ -95,23 +92,21 @@ async function handleFetchZappers() {
         if (topZappers.length > 0) {
             updateProgressBar(60, 'Loading profiles...');
             const pubkeysToFetch = topZappers.map(z => z.pubkey);
-            const profiles = await fetchProfiles(pubkeysToFetch, logToUI);
+            const profiles = await fetchProfiles(pubkeysToFetch);
             const totalSats = topZappers.reduce((sum, zapper) => sum + zapper.totalSats, 0);
             updateProgressBar(100, 'Done!');
 
             lastFetchData = { topZappers, profiles, totalSats };
             renderZapperList(topZappers, profiles, oldestZapTimestamp, totalSats);
-            logToUI("<strong>Done. Displaying results.</strong>");
 
         } else {
             updateProgressBar(100, 'Done!');
             lastFetchData = { topZappers: [], profiles: new Map(), totalSats: 0 };
             renderZapperList([], new Map(), null, 0);
-            logToUI("<strong>No zaps found.</strong>");
         }
     } catch (error) {
         console.error("Error fetching data:", error);
-        logToUI(`<strong>FATAL ERROR: ${error.message}</strong>`);
+        alert("An error occurred while fetching data.");
     } finally {
         hideProgressBar();
         fetchButton.disabled = false;
@@ -154,7 +149,6 @@ document.getElementById('login-button').addEventListener('click', async () => {
         userPubkey = loginResult.pubkey;
         showMainView();
         updateWelcomeMessage(`Welcome, ${loginResult.displayName}!`);
-        setupCopyLogButton(); // Initialize the button after the view is shown
     }
 });
 

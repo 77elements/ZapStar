@@ -33,29 +33,18 @@ Die Kernfunktionalität ist implementiert. Die App kann:
 -   **Inkonsistenz von Profildaten:** Da Nostr dezentral ist, kann es vorkommen, dass die abgefragten Relays nicht die aktuellsten Profildaten (`kind: 0`) eines Nutzers haben. Ein Nutzer kann daher mit einem veralteten Namen angezeigt werden. Die Verlinkung auf `njump.me` löst dieses Problem, indem sie dem User eine umfassendere, client-unabhängige Sicht auf das Profil ermöglicht.
 -   **Service-Accounts:** Hochplatzierte Zapper (z.B. User mit Namen "pin") sind oft keine Einzelpersonen, sondern Service-Accounts für Dienste wie Pinning oder Bookmarking, die Zaps von vielen verschiedenen Nutzern aggregieren.
 -   **Datenkonsistenz durch parallele Anfragen:** Es trat ein Problem auf, bei dem die Zap-Gesamtsummen unerwartet niedrig waren. Die Ursache war, dass bei einer sequenziellen oder unzuverlässigen Abfrage einzelner Relays nicht alle Zap-Events erfasst wurden, wenn einige Relays langsam oder offline waren. Die Lösung war die Umstellung auf eine vollständig parallele Abfrage (`pool.querySync` in `js/nostr.js`) gegen eine breitere Liste von zuverlässigen Relays. Dieser Ansatz ist robuster und stellt eine höhere Datenkonsistenz sicher, da er auf die Antwort aller erreichbaren Relays wartet.
+-   **Der "Blöder Roboter"-Ansatz für Status-Checks:** Bei dem Versuch, den Verbindungsstatus der Relays zu überwachen, sind mehrere komplexe Ansätze gescheitert. Die `nostr-tools`-Bibliothek (via CDN) entpuppte sich als Blackbox, deren interne Zustände und verfügbare Low-Level-Funktionen (`relayInit`, `seenOn`) unzuverlässig oder nicht vorhanden waren. Die erfolgreiche Lösung war ein "blöder Roboter"-Ansatz: eine strikte Trennung der Aufgaben. Zuerst wird ein unabhängiger Status-Ping mit der nativen Browser `WebSocket`-API durchgeführt, der nur den rohen Verbindungsaufbau beobachtet und protokolliert. Erst danach wird die `nostr-tools`-Bibliothek wie vorgesehen zur reinen Datenabfrage genutzt. Dieser Ansatz vermeidet Race Conditions und Abhängigkeiten von unklaren Bibliotheks-Interna.
 
 ## Zukünftige Erweiterungen
 
 ### Relay-Statusanzeige (Hohe Priorität)
 
-**Ziel:** Dem Nutzer direkt im Frontend anzeigen, welche der konfigurierten Nostr-Relays während der Abfrage erreichbar waren und welche nicht. Dies schafft Transparenz über die Datenquelle.
+**Status: Live-Log implementiert (August 2025)**
+Die Basis-Funktionalität wurde in Form eines Live-Logs umgesetzt. Dieses Log zeigt den Verbindungsstatus jedes Relays (ermittelt durch einen unabhängigen Ping) und protokolliert die nachfolgenden Schritte der Datenabfrage.
 
-**Erkenntnisse aus früherem Versuch:** Ein erster Implementierungsversuch, den Verbindungsstatus der Relays in Echtzeit zu ermitteln und im UI darzustellen, ist gescheitert. Die Komplexität der asynchronen Verbindungs-Events von `nostr-tools` und deren Integration in die bestehende UI-Logik wurde unterschätzt, was zu unvorhersehbarem Verhalten und Fehlern führte. Die Aufgabe musste zurückgerollt werden. Ein neuer Ansatz muss sorgfältig geplant werden, um die UI-Updates sauber vom Datenabruf zu entkoppeln.
-
-**Neuer, geplanter Ansatz:**
-Die Inspiration für diesen Ansatz stammt aus der Analyse der Chrome-Erweiterung [websocket-devtools](https://github.com/law-chain-hot/websocket-devtools). Die Erweiterung zeigt, dass der beste Weg das "Beobachten" der Verbindungen ist, anstatt tief in die Logik einzugreifen. Wir werden dieses Prinzip auf saubere Weise umsetzen:
-
-1.  **Architektur der Entkopplung:**
-    *   **`js/nostr.js` (Datenlogik):** Diese Datei wird so erweitert, dass sie die eingebauten `connect`- und `disconnect`-Events der `Relay`-Objekte von `nostr-tools` nutzt. Sie pflegt eine interne Liste mit dem Status jedes Relays (`{url: '...', status: 'connected' | 'error' | 'pending'}`). Am Ende des gesamten Datenabrufs gibt die Kernfunktion nicht nur die Zaps, sondern auch dieses Status-Array zurück.
-    *   **`js/ui.js` (UI-Logik):** Erhält das fertige Status-Array und ist ausschließlich dafür verantwortlich, diese Informationen in einem neuen, dedizierten HTML-Element (z.B. `<div id="relay-status">`) darzustellen.
-    *   **`js/app.js` (Orchestrierung):** Ruft die Datenfunktion in `nostr.js` auf und leitet das Ergebnis (Zaps und Relay-Status) an die entsprechenden UI-Funktionen in `ui.js` weiter.
-
-2.  **Konkrete Schritte:**
-    *   **HTML:** Ein neues Container-Element `<div id="relay-status-container"></div>` in `index.html` hinzufügen.
-    *   **CSS:** Einfache Stile für die Statusanzeige (z.B. grüne/rote Indikatoren) in `style.css` definieren.
-    *   **Implementierung:** Die Logik in den drei JavaScript-Dateien wie oben beschrieben umsetzen.
-
-Dieser Ansatz ist modular, wartbar und vermeidet die Fehler des ersten Versuchs.
+**Nächste Schritte:**
+1.  Das rohe Live-Log in eine saubere, benutzerfreundliche Statusanzeige (z.B. die ursprüngliche Liste mit grünen/roten Punkten) umwandeln.
+2.  Die Logik zur Fehlerbehandlung verbessern, um dem Nutzer klarere Rückmeldungen zu geben.
 
 ### "Zap Back" Funktionalität (Niedrigere Priorität)
 

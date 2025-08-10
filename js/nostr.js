@@ -10,74 +10,61 @@ const RELAYS = [
     'wss://nostr.bitcoiner.social'
 ];
 
-// We only use the pool for the data fetch, not for status checks.
 const pool = new SimplePool({ eoseTimeout: 10000 });
 
 /**
- * Checks relay statuses using the native browser WebSocket API, completely independent of nostr-tools.
- * This is a simple "ping" to see if a connection can be established.
- * @param {function} log - The function to log messages to the UI.
+ * Checks relay statuses using the native browser WebSocket API.
+ * @returns {Promise<Array<{url: string, status: 'connected' | 'error'}>>}
  */
-export function checkRelaysWithVanillaJS(log) {
-    log("--- Starting Independent Relay Status Check (Vanilla JS) ---");
+export function checkRelayStatuses() {
     const promises = RELAYS.map(url => 
         new Promise(resolve => {
             const shortUrl = url.replace('wss://', '');
             let ws;
             
             const timeout = setTimeout(() => {
-                log(`[${shortUrl}]: <strong>Timeout</strong>`);
                 if (ws) ws.close();
-                resolve();
-            }, 4000); // 4-second timeout per relay
+                resolve({ url: shortUrl, status: 'error' });
+            }, 4000);
 
             try {
                 ws = new WebSocket(url);
 
                 ws.onopen = () => {
                     clearTimeout(timeout);
-                    log(`[${shortUrl}]: Connected`);
                     ws.close();
-                    resolve();
+                    resolve({ url: shortUrl, status: 'connected' });
                 };
 
-                ws.onerror = (err) => {
+                ws.onerror = () => {
                     clearTimeout(timeout);
-                    log(`[${shortUrl}]: <strong>Connection Error</strong>`);
-                    // The 'onclose' event will fire after an error, so we don't resolve here.
-                };
-
-                ws.onclose = () => {
-                    clearTimeout(timeout);
-                    resolve();
+                    ws.close();
+                    resolve({ url: shortUrl, status: 'error' });
                 };
 
             } catch (e) {
                 clearTimeout(timeout);
-                log(`[${shortUrl}]: <strong>Invalid URL or protocol</strong>`);
-                resolve();
+                resolve({ url: shortUrl, status: 'error' });
             }
         })
     );
     return Promise.all(promises);
 }
 
-async function fetchInParallel(filter, log) {
-    log(`Sending filter to ${RELAYS.length} relays via SimplePool: <code>${JSON.stringify(filter)}</code>`);
+async function fetchInParallel(filter) {
     const events = await pool.querySync(RELAYS, filter);
-    log(`SimplePool returned ${events.length} raw events.`);
     return events;
 }
 
-export async function fetchZaps(userPubkey, log) {
+export async function fetchZaps(userPubkey) {
     const zapFilter = { kinds: [9735], '#p': [userPubkey] };
-    return await fetchInParallel(zapFilter, log);
+    return await fetchInParallel(zapFilter);
 }
 
-export async function fetchProfiles(pubkeys, log) {
+export async function fetchProfiles(pubkeys) {
     if (pubkeys.length === 0) return new Map();
     const profileFilter = { kinds: [0], authors: pubkeys };
-    const profileEvents = await fetchInParallel(profileFilter, log);
+    const profileEvents = await fetchInParallel(profileFilter);
     const profiles = new Map();
     for (const event of profileEvents) {
         if (!profiles.has(event.pubkey) || profiles.get(event.pubkey).created_at < event.created_at) {
