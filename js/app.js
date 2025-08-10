@@ -2,7 +2,7 @@
 // Main application entry point.
 
 import { handleLogin } from './auth.js';
-import { fetchZaps, fetchProfiles, closeConnections, publishNote } from './nostr.js';
+import { fetchZaps, fetchProfiles, checkRelaysWithVanillaJS, publishNote } from './nostr.js';
 import { 
     showMainView, 
     updateWelcomeMessage, 
@@ -12,11 +12,12 @@ import {
     renderZapperList, 
     generatePostContent,
     showEditModal,
-    hideEditModal
+    hideEditModal,
+    logToUI,
+    setupCopyLogButton
 } from './ui.js';
 
 let userPubkey = null;
-const CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 // Store last fetched data for sharing
 let lastFetchData = {
@@ -26,6 +27,7 @@ let lastFetchData = {
 };
 
 function processZapEvents(events) {
+    logToUI(`Processing ${events.length} zap events...`);
     const zapperTotals = new Map();
     let oldestZapTimestamp = Infinity;
 
@@ -58,6 +60,7 @@ function processZapEvents(events) {
         }))
         .sort((a, b) => b.totalSats - a.totalSats);
         
+    logToUI(`Found ${sortedZappers.length} unique zappers.`);
     return {
         topZappers: sortedZappers.slice(0, 20),
         oldestZapTimestamp: oldestZapTimestamp === Infinity ? null : oldestZapTimestamp
@@ -70,68 +73,48 @@ async function handleFetchZappers() {
     const fetchButton = document.getElementById('fetch-zappers-button');
     fetchButton.disabled = true;
     
-    // --- Caching Logic ---
-    const cacheKey = `zapstar_cache_${userPubkey}`;
-    const cachedData = sessionStorage.getItem(cacheKey);
-
-    if (cachedData) {
-        const { timestamp, topZappers, profiles, oldestZapTimestamp, totalSats } = JSON.parse(cachedData);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-            console.log("Loading data from cache.");
-            lastFetchData = { topZappers, profiles: new Map(profiles), totalSats };
-            renderZapperList(topZappers, new Map(profiles), oldestZapTimestamp, totalSats);
-            fetchButton.disabled = false;
-            return;
-        }
-    }
-    // --- End Caching Logic ---
-
     document.getElementById('zapper-list').innerHTML = '';
     document.getElementById('list-footer').innerHTML = '';
+    document.getElementById('live-log').innerHTML = ''; // Clear the log
     
     showProgressBar();
-    updateProgressBar(10, 'Fetching zaps...');
-
+    
     try {
-        const zapEvents = await fetchZaps(userPubkey);
-        console.log(`Found zap events: ${zapEvents.length}`);
-        updateProgressBar(50);
+        // PHASE 1: Independent status check
+        updateProgressBar(10, 'Pinging relays...');
+        await checkRelaysWithVanillaJS(logToUI);
+        logToUI("--- Relay Check Complete ---");
 
+        // PHASE 2: Data fetch using the reliable SimplePool
+        updateProgressBar(30, 'Fetching zaps...');
+        const zapEvents = await fetchZaps(userPubkey, logToUI);
+        
+        updateProgressBar(50, 'Processing results...');
         const { topZappers, oldestZapTimestamp } = processZapEvents(zapEvents);
 
         if (topZappers.length > 0) {
             updateProgressBar(60, 'Loading profiles...');
             const pubkeysToFetch = topZappers.map(z => z.pubkey);
-            const profiles = await fetchProfiles(pubkeysToFetch);
+            const profiles = await fetchProfiles(pubkeysToFetch, logToUI);
             const totalSats = topZappers.reduce((sum, zapper) => sum + zapper.totalSats, 0);
-            updateProgressBar(100);
+            updateProgressBar(100, 'Done!');
 
-            lastFetchData = { topZappers, profiles, totalSats }; // Save for sharing
+            lastFetchData = { topZappers, profiles, totalSats };
             renderZapperList(topZappers, profiles, oldestZapTimestamp, totalSats);
-
-            // --- Caching Logic ---
-            const dataToCache = {
-                timestamp: Date.now(),
-                topZappers,
-                profiles: Array.from(profiles.entries()), // Convert Map to array for JSON
-                oldestZapTimestamp,
-                totalSats
-            };
-            sessionStorage.setItem(cacheKey, JSON.stringify(dataToCache));
-            // --- End Caching Logic ---
+            logToUI("<strong>Done. Displaying results.</strong>");
 
         } else {
-            updateProgressBar(100);
-            lastFetchData = { topZappers: [], profiles: new Map(), totalSats: 0 }; // Clear old data
+            updateProgressBar(100, 'Done!');
+            lastFetchData = { topZappers: [], profiles: new Map(), totalSats: 0 };
             renderZapperList([], new Map(), null, 0);
+            logToUI("<strong>No zaps found.</strong>");
         }
     } catch (error) {
         console.error("Error fetching data:", error);
-        alert("An error occurred while fetching data.");
+        logToUI(`<strong>FATAL ERROR: ${error.message}</strong>`);
     } finally {
         hideProgressBar();
         fetchButton.disabled = false;
-        closeConnections();
     }
 }
 
@@ -159,9 +142,6 @@ async function handlePublish() {
 
     await publishNote(noteContent);
     
-    // No success or error message will be shown to the user.
-    // The developer can check the console for the outcome.
-
     publishButton.disabled = false;
 }
 
@@ -174,6 +154,7 @@ document.getElementById('login-button').addEventListener('click', async () => {
         userPubkey = loginResult.pubkey;
         showMainView();
         updateWelcomeMessage(`Welcome, ${loginResult.displayName}!`);
+        setupCopyLogButton(); // Initialize the button after the view is shown
     }
 });
 

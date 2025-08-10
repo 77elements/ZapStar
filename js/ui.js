@@ -163,3 +163,34 @@ export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats) 
     
     showShareButtons();
 }
+
+export function logToUI(message) {
+    const container = document.getElementById('live-log-container');
+    const log = document.getElementById('live-log');
+    if (!container || !log) return;
+
+    container.style.display = 'block';
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = document.createElement('p');
+    logEntry.innerHTML = `<code>[${timestamp}]</code> ${message}`;
+    log.appendChild(logEntry);
+    log.scrollTop = log.scrollHeight;
+}
+
+export function setupCopyLogButton() {
+    const copyButton = document.getElementById('copy-log-button');
+    const logContainer = document.getElementById('live-log');
+    if (!copyButton || !logContainer) return;
+
+    copyButton.addEventListener('click', () => {
+        const logText = logContainer.innerText;
+        navigator.clipboard.writeText(logText).then(() => {
+            copyButton.textContent = 'Copied!';
+            setTimeout(() => {
+                copyButton.textContent = 'Copy';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy log: ', err);
+        });
+    });
+}
