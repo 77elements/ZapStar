@@ -1,7 +1,7 @@
 // js/nostr.js
 // Handles all communication with Nostr relays.
 
-import { SimplePool } from 'https://esm.sh/nostr-tools@2.1.3';
+import { SimplePool } from 'nostr-tools';
 
 const RELAYS = [
     'wss://relay.damus.io', 'wss://relay.primal.net', 'wss://relay.snort.social',

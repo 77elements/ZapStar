@@ -1,7 +1,7 @@
 // js/ui.js
 // Handles all DOM manipulation and UI updates.
 
-import { nip19 } from 'https://esm.sh/nostr-tools@2.1.3';
+import { nip19 } from 'nostr-tools';
 
 export function showMainView() {
     document.getElementById('login-view').style.display = 'none';

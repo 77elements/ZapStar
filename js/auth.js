@@ -1,7 +1,7 @@
 // js/auth.js
 // Handles user authentication via NIP-07. Returns user data on success.
 
-import { nip19 } from 'https://esm.sh/nostr-tools@2.1.3';
+import { nip19 } from 'nostr-tools';
 import { fetchOwnProfile } from './nostr.js';
 
 export async function handleLogin() {
