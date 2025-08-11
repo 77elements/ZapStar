@@ -1,78 +1,65 @@
-# Projekt: ZapStar
+# Project: ZapStar
 
-**Letztes Update:** 09.08.2025 13:15
+**Last Update:** 2025-08-11 19:45
 
-## Konzept
+## Concept
 
-ZapStar ist eine Web-Anwendung für Nutzer des dezentralen Nostr-Protokolls. Das Ziel der App ist es, herauszufinden, welche anderen Nostr-Nutzer dem eigenen Account die meisten Satoshis via "Zaps" gesendet haben.
+ZapStar is a web application for users of the decentralized Nostr protocol. The app's goal is to identify which other Nostr users have sent the most Satoshis to one's own account via "zaps".
 
-## Aktueller Stand & Funktionalität
+## Current Status & Functionality
 
-Die Kernfunktionalität ist implementiert. Die App kann:
-1.  Nutzer via NIP-07 Browser-Erweiterung (z.B. Alby) authentifizieren.
-2.  Nach Klick auf einen Button die Top 20 Zapper für den eigenen Account ermitteln.
-3.  Die Liste der Top-Zapper anzeigen, inklusive `display_name`, `name` und der Gesamtsumme der Sats.
-4.  Jeden Zapper in der Liste auf dessen `njump.me`-Profilseite verlinken.
-5.  Einen Hinweis anzeigen, seit wann die Zaps in der Abfrage berücksichtigt wurden.
-6.  Einen Fortschrittsbalken während des Ladevorgangs anzeigen.
+The core functionality is implemented. The app can:
+1.  Authenticate users via a NIP-07 browser extension (e.g., Alby).
+2.  Determine the top 20 zappers for the user's account after a button click.
+3.  Display the list of top zappers, including their `display_name`, `name`, and the total sum of sats.
+4.  Link each zapper in the list to their `njump.me` profile page.
+5.  Show a notice indicating the start date for the zaps included in the query.
+6.  Display a status indicator for the queried relays.
+7.  Allow the user to send a "zap back" to anyone in the list using a Nostr Wallet Connect string.
 
-## Technischer Stack & Implementierungsdetails
+## Tech Stack & Implementation Details
 
--   **Architektur:** Single-Page-Application (SPA).
+-   **Architecture:** Single-Page Application (SPA).
 -   **Frontend:** Vanilla JavaScript, HTML5, CSS3.
--   **Bibliotheken:** `nostr-tools`, geladen über das `esm.sh` CDN, da sich dies als die zuverlässigste Methode für den Browser-Import erwiesen hat.
--   **Datenabruf:** Die App verbindet sich direkt mit einer Liste von 8 öffentlichen Nostr-Relays, um die Daten zu beziehen. Es wird **keine** zentrale API wie `api.nostr.band` verwendet.
-    -   **Prozess:**
-        1.  Ein erster Aufruf holt alle `kind: 9735` (Zap) Events.
-        2.  Ein zweiter, gezielter Aufruf holt die `kind: 0` (Profil) Events für die ermittelten Top-Zapper.
--   **Relay-Liste:** `['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://relay.nostr.band', 'wss://nostr.wine', 'wss://nos.lol', 'wss://relay.snort.social', 'wss://nostr.oxtr.dev', 'wss://nostr-pub.wellorder.net']`
+-   **Dependencies:** `nostr-tools` is managed as a project dependency via `npm`.
+-   **Build Process:** `esbuild` is used via `npx` in a `build.sh` script to bundle all JavaScript modules into a single, optimized file for production.
+-   **Data Fetching:** The app connects directly to a list of public Nostr relays. It does **not** use a central API like `api.nostr.band`.
+-   **Relay List:** `['wss://relay.damus.io', 'wss://relay.primal.net', 'wss://relay.snort.social', 'wss://purplepag.es', 'wss://relay.nostr.band', 'wss://nos.lol', 'wss://relay.wellorder.net', 'wss://nostr.wine', 'wss://relay.nostriches.org', 'wss://nostr.bitcoiner.social']`
 
-## Wichtige Erkenntnisse & Kontext
+## Key Learnings & Context
 
--   **Struktur von Zap-Events:** Die entscheidenden Informationen (Zapper-Pubkey, Betrag) befinden sich in einem JSON-String innerhalb des `description`-Tags des `kind: 9735` Events. Der Code ist darauf ausgelegt, dieses verschachtelte JSON zu parsen.
--   **Inkonsistenz von Profildaten:** Da Nostr dezentral ist, kann es vorkommen, dass die abgefragten Relays nicht die aktuellsten Profildaten (`kind: 0`) eines Nutzers haben. Ein Nutzer kann daher mit einem veralteten Namen angezeigt werden. Die Verlinkung auf `njump.me` löst dieses Problem, indem sie dem User eine umfassendere, client-unabhängige Sicht auf das Profil ermöglicht.
--   **Service-Accounts:** Hochplatzierte Zapper (z.B. User mit Namen "pin") sind oft keine Einzelpersonen, sondern Service-Accounts für Dienste wie Pinning oder Bookmarking, die Zaps von vielen verschiedenen Nutzern aggregieren.
--   **Datenkonsistenz durch parallele Anfragen:** Es trat ein Problem auf, bei dem die Zap-Gesamtsummen unerwartet niedrig waren. Die Ursache war, dass bei einer sequenziellen oder unzuverlässigen Abfrage einzelner Relays nicht alle Zap-Events erfasst wurden, wenn einige Relays langsam oder offline waren. Die Lösung war die Umstellung auf eine vollständig parallele Abfrage (`pool.querySync` in `js/nostr.js`) gegen eine breitere Liste von zuverlässigen Relays. Dieser Ansatz ist robuster und stellt eine höhere Datenkonsistenz sicher, da er auf die Antwort aller erreichbaren Relays wartet.
--   **Der "Blöder Roboter"-Ansatz für Status-Checks:** Bei dem Versuch, den Verbindungsstatus der Relays zu überwachen, sind mehrere komplexe Ansätze gescheitert. Die `nostr-tools`-Bibliothek (via CDN) entpuppte sich als Blackbox, deren interne Zustände und verfügbare Low-Level-Funktionen (`relayInit`, `seenOn`) unzuverlässig oder nicht vorhanden waren. Die erfolgreiche Lösung war ein "blöder Roboter"-Ansatz: eine strikte Trennung der Aufgaben. Zuerst wird ein unabhängiger Status-Ping mit der nativen Browser `WebSocket`-API durchgeführt, der nur den rohen Verbindungsaufbau beobachtet und protokolliert. Erst danach wird die `nostr-tools`-Bibliothek wie vorgesehen zur reinen Datenabfrage genutzt. Dieser Ansatz vermeidet Race Conditions und Abhängigkeiten von unklaren Bibliotheks-Interna.
+-   **The "Dumb Robot" Approach:** During the implementation of the relay status display, several attempts based on the abstractions of the `nostr-tools` library (`SimplePool`) failed. The library proved to be a black box whose internal states and available low-level functions (`relayInit`, `seenOn`) were unreliable via CDN. The successful solution was a "dumb robot" approach: a strict separation of concerns. First, an independent status ping is performed using the **native browser `WebSocket` API**, which only observes the raw connection establishment. Only then is the `nostr-tools` library used as intended for pure data fetching. This approach avoids race conditions and dependencies on unclear library internals.
+-   **CDN vs. NPM:** The attempt to load `nostr-tools` exclusively via a CDN led to hard-to-diagnose errors, as the exported modules did not contain all expected functions. Switching to a standard `npm` dependency solved these problems and enabled a robust build process with `esbuild`.
+-   **Data Consistency with `pool.querySync`:** For pure data fetching, the `SimplePool.querySync` method remains the most robust approach. It queries all relays in parallel, waits for their responses (or a timeout), and automatically deduplicates the results.
+-   **Nostr Wallet Connect (NWC):** For the "Zap Back" feature, relying on a WebLN browser extension proved too restrictive. The more modern and protocol-native approach is using Nostr Wallet Connect (NIP-47). The app asks the user for their NWC string once per session and uses it to send an encrypted payment request to the user's wallet via a relay, which the user then confirms in their wallet app. This is more complex but far more flexible.
 
-## Zukünftige Erweiterungen
+## Future Extensions
 
-### Relay-Statusanzeige (Hohe Priorität)
+### Android App (.apk) via Capacitor
 
-**Status: Live-Log implementiert (August 2025)**
-Die Basis-Funktionalität wurde in Form eines Live-Logs umgesetzt. Dieses Log zeigt den Verbindungsstatus jedes Relays (ermittelt durch einen unabhängigen Ping) und protokolliert die nachfolgenden Schritte der Datenabfrage.
+**Goal:** Create an installable `.apk` file for Android devices to publish the app in alternative app stores like Zapstore.
 
-**Nächste Schritte:**
-1.  Das rohe Live-Log in eine saubere, benutzerfreundliche Statusanzeige (z.B. die ursprüngliche Liste mit grünen/roten Punkten) umwandeln.
-2.  Die Logik zur Fehlerbehandlung verbessern, um dem Nutzer klarere Rückmeldungen zu geben.
+**Planned Approach:**
+1.  **Install Capacitor:** Add the necessary dependencies (`@capacitor/cli`, `@capacitor/core`, `@capacitor/android`) to the project via `npm`.
+2.  **Initialize Capacitor:** Run `npx cap init ZapStar` to create the `capacitor.config.json` file. Set the `webDir` in the configuration to `dist`.
+3.  **Add Android Platform:** Run `npx cap add android` to create the native Android project.
+4.  **Adjust Build Process:** Ensure the `./build.sh` script correctly generates the `dist` folder.
+5.  **Sync Assets:** Run `npx cap sync` to copy the web assets into the Android project.
+6.  **Create APK:** Open the Android project in Android Studio with `npx cap open android`. From there, the signed `.apk` file can be built for release.
+7.  **Update `.gitignore`:** Add the `android/` folder to the `.gitignore` file.
 
-### "Zap Back" Funktionalität (Niedrigere Priorität)
+## Execution & Deployment
 
-Als nächste große Funktionserweiterung ist eine "Zap Back"-Möglichkeit geplant, die es dem Nutzer erlaubt, direkt aus der Liste einen Zap an einen seiner Top-Zapper zurückzuschicken.
-
-**Geplanter Ansatz (Phasenweise Implementierung):**
-
-**Phase 1: LNURL-Implementierung (Standard-Weg)**
-1.  **UI-Anpassung:** Ein "Zap Back"-Button wird zu jedem Listeneintrag hinzugefügt.
-2.  **Profildaten erweitern:** Die `fetchProfiles`-Funktion wird so angepasst, dass sie auch die Lightning-Adresse (`lud16`) aus den `kind: 0`-Events ausliest.
-3.  **Zap-Prozess:**
-    a. Bei Klick auf den Button wird der Nutzer nach einem Betrag gefragt.
-    b. Im Hintergrund wird der Standard-LNURL-Workflow ausgeführt, um eine Lightning-Rechnung (Invoice) vom Server des Empfängers anzufordern.
-    c. Ein `kind: 9734` (Zap Request) Event wird erstellt.
-    d. Der Nutzer wird über seine NIP-07-Wallet (z.B. Alby) aufgefordert, dieses Event zu signieren. Dies dient als kryptografischer Beweis für den Zap.
-    e. Die finale Rechnung wird an die Wallet des Nutzers übergeben (`lightning:`-Link), wo dieser die Zahlung nur noch bestätigen muss.
-    
-**Phase 2: NWC-Implementierung (Power-User-Weg)**
--   Nach einer stabilen LNURL-Implementierung kann Nostr Wallet Connect (NWC) als erweiterte Option hinzugefügt werden.
--   Dies erfordert eine separate UI zur Eingabe der NWC-Verbindungsdaten und eine komplett neue Logik zur verschlüsselten Kommunikation mit dem Wallet-Dienst über `kind: 23194` und `kind: 23195` Events.
--   Der Aufwand hierfür wird als **hoch** eingeschätzt und sollte erst nach Abschluss von Phase 1 in Betracht gezogen werden.
-
-## Ausführung
-
-Um die Anwendung lokal zu testen, führe das folgende Skript im Terminal aus. Es startet einen einfachen Webserver.
-
+### Local Development
+To test the application locally, run the following script in your terminal. It starts a simple web server that serves the uncompressed development files.
 ```bash
 ./start_webserver.sh
 ```
+You can then access the application in your browser at `http://localhost:8000`.
 
-Anschließend kannst du die Anwendung in deinem Browser unter `http://localhost:8000` aufrufen.
+### Production Build & Deployment
+For deployment to a live server, an optimized production version must be created. Run the following script:
+```bash
+./build.sh
+```
+This command creates a `dist/` folder. **Only upload the contents of this `dist/` folder to your web server.** It contains all the necessary files in an optimized and bundled format.

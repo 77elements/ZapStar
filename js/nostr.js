@@ -1,16 +1,22 @@
 // js/nostr.js
 // Handles all communication with Nostr relays.
 
-import { SimplePool } from 'nostr-tools';
+import { SimplePool, nip19 } from 'nostr-tools';
 
-const RELAYS = [
-    'wss://relay.damus.io', 'wss://relay.primal.net', 'wss://relay.snort.social',
-    'wss://purplepag.es', 'wss://relay.nostr.band', 'wss://nos.lol',
-    'wss://relay.wellorder.net', 'wss://nostr.wine', 'wss://relay.nostriches.org',
+export const RELAYS = [
+    'wss://relay.damus.io',
+    'wss://relay.primal.net',
+    'wss://relay.snort.social',
+    'wss://purplepag.es',
+    'wss://relay.nostr.band',
+    'wss://nos.lol',
+    'wss://relay.wellorder.net',
+    'wss://nostr.wine',
+    'wss://relay.nostriches.org',
     'wss://nostr.bitcoiner.social'
 ];
 
-const pool = new SimplePool({ eoseTimeout: 10000 });
+const pool = new SimplePool();
 
 /**
  * Checks relay statuses using the native browser WebSocket API.

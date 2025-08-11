@@ -16,6 +16,8 @@ import {
     displayRelayStatus
 } from './ui.js';
 
+import { initiateZap } from './zap.js';
+
 let userPubkey = null;
 
 // Store last fetched data for sharing
@@ -24,6 +26,10 @@ let lastFetchData = {
     profiles: new Map(),
     totalSats: 0,
 };
+
+async function handleZapBack(lightningAddress, pubkey, displayName) {
+    initiateZap(lightningAddress, pubkey, displayName);
+}
 
 function processZapEvents(events) {
     const zapperTotals = new Map();
@@ -97,12 +103,12 @@ async function handleFetchZappers() {
             updateProgressBar(100, 'Done!');
 
             lastFetchData = { topZappers, profiles, totalSats };
-            renderZapperList(topZappers, profiles, oldestZapTimestamp, totalSats);
+            renderZapperList(topZappers, profiles, oldestZapTimestamp, totalSats, handleZapBack);
 
         } else {
             updateProgressBar(100, 'Done!');
             lastFetchData = { topZappers: [], profiles: new Map(), totalSats: 0 };
-            renderZapperList([], new Map(), null, 0);
+            renderZapperList([], new Map(), null, 0, handleZapBack);
         }
     } catch (error) {
         console.error("Error fetching data:", error);

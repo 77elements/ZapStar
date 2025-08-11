@@ -63,21 +63,39 @@ header {
     border: 1px solid var(--border-color);
 }
 
-#login-view {
+#login-view, #main-view {
     text-align: center;
 }
 
 button {
-    display: block;
-    width: 100%;
-    padding: 0.6rem 0.8rem;
+    width: auto;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+    padding: 0.6rem 1.2rem;
     border: 1px solid transparent;
     color: white;
-    border-radius: 0.3rem; /* 6px */
+    border-radius: 0.3rem;
     font-size: 1em;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease-in-out;
+}
+
+.button-gradient {
+    background: linear-gradient(to right, var(--primary-brand-color), var(--secondary-brand-color));
+    color: white;
+    border: none;
+}
+
+.button-secondary {
+    background-color: var(--container-background);
+    color: var(--subtle-text-color);
+    border: 1px solid var(--border-color);
+}
+
+.button-secondary:hover {
+    background-color: #f8f9fa;
+    color: var(--text-color);
 }
 
 #fetch-zappers-button {
@@ -105,12 +123,12 @@ button:disabled {
 }
 
 #share-buttons {
-    display: none; /* Hidden by default */
+    display: none;
     margin-top: 1.5rem;
     padding-top: 1rem;
     border-top: 1px solid var(--border-color);
     display: flex;
-    gap: 0.5rem; /* Space between buttons */
+    gap: 0.5rem;
 }
 
 #share-buttons button {
@@ -140,20 +158,21 @@ button:disabled {
 }
 
 #zapper-list li {
-    padding: 0.5rem 0.25rem; /* 10px 5px */
+    padding: 0.5rem 0.25rem;
     border-bottom: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     counter-increment: zapper-counter;
     transition: background-color 0.2s;
+    text-align: left; /* ADDED */
 }
 
 #zapper-list li:hover {
-    background-color: #f8f9fa; /* Subtle hover effect */
+    background-color: #f8f9fa;
 }
 
 #zapper-list li:nth-child(odd) {
-    background-color: #f8f9fa; /* Zebra-striping */
+    background-color: #f8f9fa;
 }
 
 
@@ -165,10 +184,10 @@ button:disabled {
 }
 
 .profile-pic {
-    width: 2.2rem; /* 44px */
-    height: 2.2rem; /* 44px */
+    width: 2.2rem;
+    height: 2.2rem;
     border-radius: 50%;
-    margin-right: 0.75rem; /* 15px */
+    margin-right: 0.75rem;
     object-fit: cover;
     border: 2px solid var(--container-background);
     box-shadow: 0 0 0 1px var(--border-color);
@@ -222,16 +241,16 @@ button:disabled {
     background-color: #e9ecef;
     border-radius: 0.25rem;
     margin: 1rem 0;
-    overflow: hidden; /* Ensures inner bar conforms to border radius */
+    overflow: hidden;
 }
 
 #progress-bar {
     width: 0%;
-    height: 1.2rem; /* 24px */
+    height: 1.2rem;
     background-color: var(--light-accent-color);
     border-radius: 0.25rem;
     text-align: center;
-    line-height: 1.2rem; /* 24px */
+    line-height: 1.2rem;
     color: white;
     font-size: 0.8em;
     transition: width 0.4s ease;
@@ -274,7 +293,7 @@ footer a:hover {
     border-radius: var(--border-radius);
     box-shadow: 0 0.2rem 1rem rgba(0,0,0,0.1);
     width: 90%;
-    max-width: 35rem; /* 700px */
+    max-width: 35rem;
     position: relative;
 }
 
@@ -300,14 +319,14 @@ footer a:hover {
 
 #note-editor {
     width: 100%;
-    height: 10rem; /* 200px */
+    height: 10rem;
     margin: 1rem 0;
     padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: 0.3rem;
     font-family: inherit;
     font-size: 0.9em;
-    box-sizing: border-box; /* Important */
+    box-sizing: border-box;
 }
 
 .modal-actions {
@@ -317,7 +336,7 @@ footer a:hover {
 }
 
 .modal-actions button {
-    width: auto; /* Override default button width */
+    width: auto;
 }
 
 #modal-cancel-button {
@@ -379,15 +398,75 @@ footer a:hover {
 }
 
 .relay-status-indicator.connected {
-    background-color: #28a745; /* Green */
+    background-color: #28a745;
 }
 
 .relay-status-indicator.error {
-    background-color: #dc3545; /* Red */
+    background-color: #dc3545;
 }
 
 .relay-url {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* --- Zap Back Button --- */
+.zap-back-button {
+    width: auto;
+    padding: 0.1rem 0.5rem;
+    font-size: 0.7em;
+    margin-left: 0.5rem;
+    background-color: var(--primary-accent-color);
+    color: white;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.zap-back-button:hover:not(:disabled) {
+    background-color: var(--primary-accent-hover);
+    transform: translateY(-1px);
+}
+
+.zap-back-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* --- Zap Modal Specifics --- */
+.modal-content label {
+    display: block;
+    margin-top: 1rem;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+    font-size: 0.9em;
+}
+
+.modal-content input[type="text"],
+.modal-content input[type="number"],
+.modal-content textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.3rem;
+    font-family: inherit;
+    font-size: 1em;
+    box-sizing: border-box;
+}
+
+#nwc-input {
+    padding: 0.8rem;
+    font-size: 1.1em;
+    flex-grow: 1; /* Take up available space */
+    width: auto; /* Override default */
+}
+
+.nwc-input-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin: 1rem 0;
 }

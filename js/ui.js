@@ -91,7 +91,7 @@ export function generatePostContent(zappers, profiles, withSats, totalSats) {
 }
 
 
-export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats) {
+export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats, zapBackHandler) {
     const zapperList = document.getElementById('zapper-list');
     const listFooter = document.getElementById('list-footer');
     const heading = document.getElementById('zapper-list-heading');
@@ -112,19 +112,22 @@ export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats) 
         const profileEvent = profiles.get(zapper.pubkey);
         const npub = nip19.npubEncode(zapper.pubkey);
         const finalDisplayName = getProfileDisplayName(profileEvent) || npub;
+        
         let pictureUrl = null;
+        let lightningAddress = null;
 
         if (profileEvent) {
             try {
                 const profileData = JSON.parse(profileEvent.content);
                 pictureUrl = profileData.picture;
+                lightningAddress = profileData.lud16;
             } catch (e) { /* Ignore */ }
         }
 
         // Profile Picture
         const img = document.createElement('img');
         img.className = 'profile-pic';
-        img.src = pictureUrl || `https://api.dicebear.com/8.x/identicon/svg?seed=${zapper.pubkey}`; // Fallback to a unique identicon
+        img.src = pictureUrl || `https://api.dicebear.com/8.x/identicon/svg?seed=${zapper.pubkey}`;
         
         const link = document.createElement('a');
         link.href = `https://njump.me/${npub}`;
@@ -139,9 +142,21 @@ export function renderZapperList(zappers, profiles, oldestTimestamp, totalSats) 
         satsAmount.className = 'sats-amount';
         satsAmount.textContent = ` ${zapper.totalSats.toLocaleString()} Sats`;
 
+        // Zap Back Button
+        const zapBackButton = document.createElement('button');
+        zapBackButton.textContent = '⚡️ Zap Back';
+        zapBackButton.className = 'zap-back-button';
+        if (lightningAddress) {
+            zapBackButton.addEventListener('click', () => zapBackHandler(lightningAddress, zapper.pubkey, finalDisplayName));
+        } else {
+            zapBackButton.disabled = true;
+            zapBackButton.title = 'User has not set a Lightning Address in their profile.';
+        }
+
         li.appendChild(img);
         li.appendChild(link);
         li.appendChild(satsAmount);
+        li.appendChild(zapBackButton);
         
         zapperList.appendChild(li);
     });
